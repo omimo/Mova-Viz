@@ -1,4 +1,4 @@
-MovaViz:  Movement Visualization Engine
+Mova-Viz:  Movement Visualization Engine
 =======
 
 Mova-Viz is a visualization engine for human movement data, including motion capture data. 
@@ -6,7 +6,7 @@ It is a part of [Mova, the movement analytics platform](https://github.com/omimo
 
 
 
-For more information, check out the project page at [https://omid.al/project/Mova.html](https://omid.al/projects/Mova.html)
+For more information, check out the project page at [https://omid.al/projects/Mova.html](https://omid.al/projects/Mova.html)
 
 ## Feedback, Bugs, and Questions
 This is still largely under development. 
