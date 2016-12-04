@@ -1,0 +1,30 @@
+{
+  "name": "mova-viz",
+  "version": "0.1.0",
+  "description": "The Visualization Engine for Mova: Movement Analytics Platform",
+  "main": "index.js",
+  "scripts": {
+    "dev": "webpack-dev-server --port 7856 --devtool source-map --progress --colors --inline --hot",
+    "deploy": "NODE_ENV=production webpack -p",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mova",
+    "movement",
+    "visualization"
+  ],
+  "author": "Omid Alemi",
+  "license": "MIT",
+  "devDependencies": {
+    "source-map-loader": "^0.1.5",
+    "ts-loader": "^1.2.2",
+    "webpack": "^1.13.3"
+  },
+  "dependencies": {
+    "d3": "^4.4.0",
+    "jquery": "^3.1.1",
+    "mathjs": "^3.8.0",
+    "source-map-loader": "^0.1.5",
+    "typescript": "^2.0.10"
+  }
+}
