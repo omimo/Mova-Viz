@@ -8,8 +8,13 @@
     </div>
 
     <script>
-        var m = MovaViz('FirstOne')
-            .data('http://www.sfu.ca/~oalemi/data/KAREN_BEAS_001_original.bvh','bvh');
+        var fig = MovaViz('FirstOne')
+            .debug(true)
+            .data('http://www.sfu.ca/~oalemi/data/35_01.bvh','bvh')
+            .frameSkip(10)
+            .jointsDraw('d')
+            ;
+            
     </script>
 </body>
 </html>

@@ -64,13 +64,31 @@ var MovaViz =
 	"use strict";
 	var Parsers_1 = __webpack_require__(3);
 	var MovaViz = (function () {
+	    /**
+	     * The constructor
+	     *
+	     * @param  {string} title
+	     */
 	    function MovaViz(title) {
 	        if (!(this instanceof MovaViz))
 	            return new MovaViz(title);
 	        this.title = title;
 	        this.tracks = [];
+	        this._debug = true;
+	        this._debugErr = true;
+	        this._frameSkip = 1;
+	        this._dataReady = false;
+	        this._fnQueue = [];
 	    }
+	    /**
+	     * Load the data into the object
+	     *
+	     * @param  {string} url
+	     * @param  {string} format the format of the data, currently only supports 'bvh'
+	     * @param  {any} callbackFn an optional function to be called once the data is loaded
+	     */
 	    MovaViz.prototype.data = function (url, format, callbackFn) {
+	        var self = this;
 	        // Create the Track object
 	        var track = {
 	            url: url,
@@ -81,24 +99,64 @@ var MovaViz =
 	        if (format in { 'bvh': 1, 'c3d': 1 })
 	            track.isMocap = true;
 	        this.log("Loading the track ...");
-	        // The Parsers.trackReaders will call the proper function
-	        var p = new Parsers_1.default[format];
+	        // The Parsers[format] will call the proper function         
 	        var parser = new Parsers_1.default[format]();
 	        parser.load(url, function (data) {
 	            track.data = data;
-	            this.log("Done!");
+	            self.log("Done!");
+	            self._dataReady = true;
+	            while (self._fnQueue.length > 0) {
+	                var fn = self._fnQueue.pop();
+	                fn[0](fn[1]);
+	            }
 	            if (callbackFn)
 	                callbackFn();
 	        });
 	        this.tracks.push(track);
 	        return this;
 	    };
+	    /**
+	     * Set the frame skip
+	     *
+	     * @param  {number} skip
+	     */
+	    MovaViz.prototype.frameSkip = function (skip) {
+	        this._frameSkip = skip;
+	        return this;
+	    };
+	    /**
+	     * Set the SVG container
+	     *
+	     * @param  {string} cont
+	     */
+	    MovaViz.prototype.container = function (cont) {
+	        return this;
+	    };
+	    MovaViz.prototype.jointsDraw = function (drawFn) {
+	        var self = this;
+	        if (!self._dataReady) {
+	            self._fnQueue.push([this.jointsDraw.bind(this), drawFn]);
+	            return self;
+	        }
+	        console.log(self.tracks[self.tracks.length - 1].data.frameArray.filter(function (d, i) {
+	            return i % self._frameSkip == 0;
+	        }));
+	        return this;
+	    };
+	    MovaViz.prototype.debug = function (d) {
+	        this._debug = d;
+	        return this;
+	    };
+	    MovaViz.prototype.debugErrors = function (d) {
+	        this._debugErr = d;
+	        return this;
+	    };
 	    MovaViz.prototype.log = function (m) {
-	        if (this.debug)
+	        if (this._debug)
 	            console.log(this.title + ": " + m.toString());
 	    };
 	    MovaViz.prototype.err = function (m) {
-	        if (this.debugErr)
+	        if (this._debugErr)
 	            console.log("ERROR - " + this.title + ": " + m.toString());
 	    };
 	    return MovaViz;
