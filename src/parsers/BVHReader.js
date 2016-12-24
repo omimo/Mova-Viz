@@ -209,13 +209,23 @@ BVHReader.BVH.Skeleton = function (root, map, arr, connectivityMatrix, frameCoun
     	posFrame = posFrame.map(function(d) {
 			return {
 				x : d[0],
-				y : d[1],
+				y : -d[1],
 				z : d[2],
 			};
 		});
 
         return posFrame;
     };
+
+    this.getPositionsArray = function() {
+        posArray = [];
+        for (f=0;f<this.frameArray.length;f++) {
+            posArray.push(this.getPositionsAt(f));
+        }
+
+        return posArray;
+    };
+
     this.getTPose = function () {
     	// This function is basically the same as the getPositionsAt except that all the rotations will be 0
         console.log("Not yet implemented");

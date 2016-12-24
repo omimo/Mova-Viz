@@ -76,9 +76,9 @@ var MovaViz =
 	        this.tracks = [];
 	        this._debug = true;
 	        this._debugErr = true;
-	        this._frameSkip = 1;
 	        this._dataReady = false;
-	        this._fnQueue = [];
+	        this._drawMethods = [];
+	        this._updateMethods = [];
 	    }
 	    /**
 	     * Load the data into the object
@@ -105,9 +105,10 @@ var MovaViz =
 	            track.data = data;
 	            self.log("Done!");
 	            self._dataReady = true;
-	            while (self._fnQueue.length > 0) {
-	                var fn = self._fnQueue.pop();
-	                fn[0](fn[1]);
+	            for (var _i = 0, _a = self._drawMethods; _i < _a.length; _i++) {
+	                var dm = _a[_i];
+	                if (!dm.drawn)
+	                    self.callDrawFn(dm);
 	            }
 	            if (callbackFn)
 	                callbackFn();
@@ -115,13 +116,20 @@ var MovaViz =
 	        this.tracks.push(track);
 	        return this;
 	    };
-	    /**
-	     * Set the frame skip
-	     *
-	     * @param  {number} skip
-	     */
-	    MovaViz.prototype.frameSkip = function (skip) {
-	        this._frameSkip = skip;
+	    MovaViz.prototype.addDrawMethod = function (drawFn, dataType, frames, frameSkip) {
+	        if (frameSkip === undefined)
+	            frameSkip = 1;
+	        var dm = {
+	            fn: drawFn,
+	            drawn: false,
+	            dataType: dataType,
+	            frames: frames,
+	            frameSkip: frameSkip
+	        };
+	        if (this._dataReady) {
+	            this.callDrawFn(dm);
+	        }
+	        this._drawMethods.push(dm);
 	        return this;
 	    };
 	    /**
@@ -130,17 +138,62 @@ var MovaViz =
 	     * @param  {string} cont
 	     */
 	    MovaViz.prototype.container = function (cont) {
+	        this.svgContainer = cont;
 	        return this;
 	    };
-	    MovaViz.prototype.jointsDraw = function (drawFn) {
+	    MovaViz.prototype.callDrawFn = function (dm) {
 	        var self = this;
 	        if (!self._dataReady) {
-	            self._fnQueue.push([this.jointsDraw.bind(this), drawFn]);
+	            self.err('Data is not ready for drawing!');
 	            return self;
 	        }
-	        console.log(self.tracks[self.tracks.length - 1].data.frameArray.filter(function (d, i) {
-	            return i % self._frameSkip == 0;
-	        }));
+	        var data = new Array;
+	        var selector = {};
+	        if (dm.frames === undefined) {
+	            console.log('111');
+	            data = self.tracks[self.tracks.length - 1].data.getPositionsArray().filter(function (d, i) {
+	                return i % dm.frameSkip == 0;
+	            });
+	            selector = self.svgContainer.selectAll("g.dataframe")
+	                .data(data)
+	                .enter()
+	                .append('g').attr('calss', 'dataframe')
+	                .selectAll('d')
+	                .data(function (d) {
+	                return d;
+	            });
+	            dm.fn(selector);
+	        }
+	        else if (dm.frames.length == 1) {
+	            console.log('222');
+	            data = self.tracks[self.tracks.length - 1].data.getPositionsArray()[dm.frames[0]];
+	            // console.log(jointData);
+	            selector = self.svgContainer.selectAll("g.dataframe")
+	                .data(data)
+	                .enter();
+	            dm.fn(selector);
+	        }
+	        else if (dm.frames.length == 2) {
+	            console.log('333');
+	            data = self.tracks[self.tracks.length - 1].data.getPositionsArray().filter(function (d, i) {
+	                return i >= dm.frames[0] && i < dm.frames[2] && (i % dm.frameSkip == 0);
+	            });
+	            selector = self.svgContainer.selectAll("g.dataframe")
+	                .data(data)
+	                .enter()
+	                .append('g').attr('calss', 'dataframe')
+	                .selectAll('d')
+	                .data(function (d) {
+	                return d;
+	            });
+	            dm.fn(selector);
+	        }
+	        else {
+	            self.err('Invalid frame range!');
+	        }
+	        // console.log('eeeee');
+	        // console.log(jointData);
+	        dm.drawn = true;
 	        return this;
 	    };
 	    MovaViz.prototype.debug = function (d) {
@@ -392,13 +445,23 @@ var MovaViz =
 	    	posFrame = posFrame.map(function(d) {
 				return {
 					x : d[0],
-					y : d[1],
+					y : -d[1],
 					z : d[2],
 				};
 			});
 	
 	        return posFrame;
 	    };
+	
+	    this.getPositionsArray = function() {
+	        posArray = [];
+	        for (f=0;f<this.frameArray.length;f++) {
+	            posArray.push(this.getPositionsAt(f));
+	        }
+	
+	        return posArray;
+	    };
+	
 	    this.getTPose = function () {
 	    	// This function is basically the same as the getPositionsAt except that all the rotations will be 0
 	        console.log("Not yet implemented");

@@ -4,7 +4,8 @@
   "description": "The Visualization Engine for Mova: Movement Analytics Platform",
   "main": "index.js",
   "scripts": {
-    "dev": "webpack-dev-server --port 7856 --devtool source-map --progress --colors --inline --hot",
+    "dev": "webpack-dev-server --port 7856 --devtool source-map --progress --colors --hot",
+    "dev2": "webpack-dashboard -- webpack-dev-server  --port 7856 -devtool source-map --progress --colors --hot",
     "deploy": "NODE_ENV=production webpack -p",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -18,7 +19,8 @@
   "devDependencies": {
     "source-map-loader": "^0.1.5",
     "ts-loader": "^1.2.2",
-    "webpack": "^1.13.3"
+    "webpack": "^1.13.3",
+    "webpack-dashboard": "^0.2.0"
   },
   "dependencies": {
     "d3": "^4.4.0",
