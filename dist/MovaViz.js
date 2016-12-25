@@ -190,8 +190,7 @@ var MovaViz =
 	        else if (dm.frames.length == 1) {
 	            console.log('222');
 	            data = data[dm.frames[0]];
-	            selector = self.svgContainer
-	                .append('g')
+	            selector = self.svgContainer.append('g')
 	                .attr('class', 'g-' + dm.dataType)
 	                .selectAll('.' + dm.dataType)
 	                .data(data)
@@ -203,7 +202,9 @@ var MovaViz =
 	            data = data.filter(function (d, i) {
 	                return i >= dm.frames[0] && i < dm.frames[1] && (i % dm.frameSkip == 0);
 	            });
-	            selector = self.svgContainer.selectAll("g.dataframe")
+	            selector = self.svgContainer.append('g')
+	                .attr('class', 'g-' + dm.dataType)
+	                .selectAll('.' + dm.dataType)
 	                .data(data)
 	                .enter();
 	            dm.fn(selector);
@@ -275,7 +276,8 @@ var MovaViz =
 	            data = data.filter(function (d, i) {
 	                return i >= frames[0] && i < frames[1] && (i % frameSkip == 0);
 	            });
-	            selector = self.svgContainer.selectAll("g.dataframe")
+	            selector = self.svgContainer.selectAll('g.g-' + dataType)
+	                .selectAll('.' + dataType)
 	                .data(data);
 	            drawFn(selector);
 	        }

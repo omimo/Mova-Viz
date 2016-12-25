@@ -13,12 +13,13 @@
 
         var svg = parent.append("svg")
             .attr("width", 1500)
-            .attr("height", 500);
-        var scale = 1;
+            .attr("height", 800);
+        var scale = 4;
         var gap = 50;
         var animFrame = 700;
         var startTime = 0;
         var fr = 1/120;
+        var randScale = 100;
 
         var circleJointEnterFcn = function(j) {
             c = j;
@@ -27,10 +28,10 @@
                 c = j.append('circle').attr('class','joint-positions');            
             
             c.attr("cx", function (d) {                
-                return d.x * scale + 100;
+                return d.x * scale + 300 + Math.random() * randScale;
             })
             .attr("cy", function (d) {
-                return d.y * scale + 200;
+                return d.y * scale + 400 + Math.random() * randScale;
             })
             .attr("r", function (d, i) {
                     return 6;
@@ -41,43 +42,50 @@
             .attr("opacity", 0.6);
         };
 
+        var boneFunction = function(d, k) {
+            bf = d3.line()
+                .x(function(d) { return d.x1  * scale + 300 + Math.random() * randScale;; })
+                .y(function(d) { return d.y1  * scale + 400 + Math.random() * randScale;; })
+                .curve(d3.curveBasis);
+            return (bf(d));
+        };
 
         lineBoneAddFcn = function(j) {            
             c = j;
 
-           if (j._exit === undefined)
-                c = j.append('line').attr('class','bone-positions');
+           if (j._exit === undefined) {
+               c = j.append("path")                  
+                .attr("class","bone-positions")   
+                .attr("stroke", "#666666")
+                .attr("stroke-opacity", .9)
+                .attr("stroke-width", 1)
+                .attr("fill", "transparent");
+           }
+                
 
-            c.attr("stroke", "#995599")
-            .attr("stroke-width", 1)
-            .attr("opacity", 0.8)            
-            .attr("x1", function (d, j) {                
-                return d.x1  * scale + 100;
-            })
-            .attr("x2", function (d, j) {
-                return d.x2 * scale + 100;
-            })
-            .attr("y1", function (d, j) {
-                return d.y1 * scale + 200;
-            })
-            .attr("y2", function (d, j) {
-                return d.y2 * scale + 200;
-            });
+            c.attr("d", function(d,i) {                
+                    return boneFunction(d)
+                })
         }
 
     
-        var anim = function () {
+        var anim = function () {            
             if (startTime==0)
                 startTime = Date.now();
+
+            randScale -= 0.1;
+
+            if (randScale < 0)
+                randScale = 0;
+
             animFrame = Math.floor((Date.now() - startTime)/1000 / fig.tracks[0].data.frameTime);                                        
-            // animFrame = Math.floor((Date.now() - startTime)/1000 / fr);
-                
-            if (animFrame > fig.tracks[0].data.frameCount) {
+                            
+            if (animFrame >= fig.tracks[0].data.frameCount) {
                 startTime=Date.now();
                 animFrame = 0;
             }
 
-            fig.updateDraw(lineBoneAddFcn, 'bone-positions', [animFrame]);
+            fig.updateDraw(lineBoneAddFcn, 'bone-positions', [animFrame,animFrame+1]);
             fig.updateDraw(circleJointEnterFcn, 'joint-positions', [animFrame]);
             animFrame++;
 
@@ -86,14 +94,14 @@
 
         var fig = MovaViz('FirstOne')
             .debug(true)
-            // .data('http://www.sfu.ca/~oalemi/data/Slash_x4_0001KAREN.bvh','bvh', anim)
+            .data('http://www.sfu.ca/~oalemi/data/MS2_8Walk_M_nopos.bvh','bvh', anim)
             // .data('http://www.sfu.ca/~oalemi/data/Gemma_sync.bvh','bvh', anim)
-            .data('http://www.sfu.ca/~oalemi/data/2015-11-27_12-07-39-anotnio-improv-fl.bvh','bvh', anim)
+            // .data('http://www.sfu.ca/~oalemi/data/2015-11-27_12-07-39-anotnio-improv-fl.bvh','bvh', anim)
             .container(svg);
   
         
         fig.addDrawMethod(circleJointEnterFcn, 'joint-positions', [0]);
-        fig.addDrawMethod(lineBoneAddFcn, 'bone-positions', [0]);
+        fig.addDrawMethod(lineBoneAddFcn, 'bone-positions', [200,201]);
 
         
         
