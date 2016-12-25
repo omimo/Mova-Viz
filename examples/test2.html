@@ -12,11 +12,12 @@
         var parent = d3.select("body").select("#cont");
 
         var svg = parent.append("svg")
-            .attr("width", 500)
+            .attr("width", 900)
             .attr("height", 500);
-        var scale = 5;
+        var scale = 2;
+        var gap = 50;
 
-        var jointFcn = function(j) {
+        var circleJointFcn = function(j) {
             j.append("circle")
             .attr("cx", function (d) {
                 // console.log(d);
@@ -34,15 +35,59 @@
             .attr("opacity", 0.9);
         };
 
+        multiJointFcn = function(j) {            
+            var k = j.append('g')
+                .attr('transform', function(d,i){ 
+                    return "translate(" + (i * gap) + ",0)"; 
+                })
+                .selectAll('g')
+                .data(function(d,i) {            
+                    return d;
+                })
+                .enter();
+            circleJointFcn(k);            
+        }
 
+        lineBoneFcn = function(j) {
+            j.append("line")
+            .attr("stroke", "#555555")
+            .attr("stroke-width", 1)
+            .attr("opacity", 0.9)            
+            .attr("x1", function (d, j) {                
+                return d.x1  * scale + 10;
+            })
+            .attr("x2", function (d, j) {
+                return d.x2 * scale + 10;
+            })
+            .attr("y1", function (d, j) {
+                return d.y1 * scale + 200;
+            })
+            .attr("y2", function (d, j) {
+                return d.y2 * scale + 200;
+            });
+        }
+
+        multiBonesFcn = function(j) {
+            var k = j.append('g')
+                .attr('transform', function(d,i){ 
+                    return "translate(" + (i * gap) + ",0)"; 
+                })
+                .selectAll('g')
+                .data(function(d,i) {            
+                    return d;
+                })
+                .enter();
+            lineBoneFcn(k);
+        }
 
         var fig = MovaViz('FirstOne')
             .debug(true)
-            .data('http://www.sfu.ca/~oalemi/data/35_01.bvh','bvh')
+            .data('http://www.sfu.ca/~oalemi/data/Slash_x4_0001KAREN.bvh','bvh')
             .container(svg);
   
         
-        fig.addDrawMethod(jointFcn, 'joint-positions');
+        fig.addDrawMethod(multiJointFcn, 'joint-positions', [900,1200], 10);
+        fig.addDrawMethod(multiBonesFcn, 'bone-positions', [900,1200], 10);
             
     </script>
 </body>

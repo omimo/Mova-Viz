@@ -112,9 +112,34 @@ export default class MovaViz {
         let data = new Array;
         let selector = {};
 
+        if (dm.dataType == 'joint-positions') 
+            data = self.tracks[self.tracks.length-1].data.getPositionsArray();
+        else if (dm.dataType == 'joint-rotations') 
+            data = self.tracks[self.tracks.length-1].data.frameArray;
+        else if (dm.dataType == 'bone-positions') {
+            let skeleton = self.tracks[self.tracks.length-1].data.connectivityMatrix;            
+            data = self.tracks[self.tracks.length-1].data.getPositionsArray();
+            data = data.map(function (d:any, i:number) {
+                return skeleton.map(function(b:any,j:number) {
+                    // console.log(b);
+                    return {
+                        x1:d[b[0].jointIndex].x,
+                        y1:d[b[0].jointIndex].y,
+                        x2:d[b[1].jointIndex].x,
+                        y2:d[b[1].jointIndex].y,
+                    }
+                });
+            });
+            // console.log(data);
+        }
+        else {
+            self.err('Invalid data config!');
+            return self;
+        }
+
         if (dm.frames === undefined) {
             console.log('111');
-            data = self.tracks[self.tracks.length-1].data.getPositionsArray().filter(function(d: number, i:number){
+            data = data.filter(function(d: number, i:number){
                 return i % dm.frameSkip == 0;
             });
 
@@ -130,8 +155,7 @@ export default class MovaViz {
             dm.fn(selector);            
         } else if (dm.frames.length == 1) {
             console.log('222');
-            data = self.tracks[self.tracks.length-1].data.getPositionsArray()[dm.frames[0]];
-            // console.log(jointData);
+            data = data[dm.frames[0]];            
             selector = self.svgContainer.selectAll("g.dataframe")
             .data(data)
             .enter();
@@ -139,18 +163,12 @@ export default class MovaViz {
             dm.fn(selector);
         } else if (dm.frames.length == 2) {
             console.log('333');
-            data = self.tracks[self.tracks.length-1].data.getPositionsArray().filter(function(d: number, i:number){
-                return i>=dm.frames[0] && i<dm.frames[2] && (i % dm.frameSkip == 0);
-            });
-
+            data = data.filter(function(d: number, i:number){                
+                return i>=dm.frames[0] && i<dm.frames[1] && (i % dm.frameSkip == 0);
+            });    
             selector = self.svgContainer.selectAll("g.dataframe")
             .data(data)
-            .enter()
-            .append('g').attr('calss','dataframe')
-            .selectAll('d')
-            .data(function (d: any) {
-                return d;
-            });
+            .enter();
 
             dm.fn(selector);
         } else {
