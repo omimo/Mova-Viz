@@ -156,7 +156,10 @@ export default class MovaViz {
         } else if (dm.frames.length == 1) {
             console.log('222');
             data = data[dm.frames[0]];            
-            selector = self.svgContainer.selectAll("g.dataframe")
+            selector = self.svgContainer
+            .append('g')
+            .attr('class', 'g-'+dm.dataType)
+            .selectAll('.'+dm.dataType)
             .data(data)
             .enter();
 
@@ -180,6 +183,83 @@ export default class MovaViz {
         
 
         dm.drawn = true;
+
+        return this;
+    }
+
+    updateDraw(drawFn: any, dataType: string, frames: number[], frameSkip: number) {
+        let self = this;  
+
+        if (frameSkip === undefined)
+            frameSkip = 1;
+
+        if (!self._dataReady) {
+            self.err('Data is not ready for drawing!');
+            return self;
+        }
+        
+        let data = new Array;
+        let selector = {};
+
+        // Extract the proper data set
+        if (dataType == 'joint-positions') 
+            data = self.tracks[self.tracks.length-1].data.getPositionsArray();
+        else if (dataType == 'joint-rotations') 
+            data = self.tracks[self.tracks.length-1].data.frameArray;
+        else if (dataType == 'bone-positions') {
+            let skeleton = self.tracks[self.tracks.length-1].data.connectivityMatrix;            
+            data = self.tracks[self.tracks.length-1].data.getPositionsArray();
+            data = data.map(function (d:any, i:number) {
+                return skeleton.map(function(b:any,j:number) {
+                    // console.log(b);
+                    return {
+                        x1:d[b[0].jointIndex].x,
+                        y1:d[b[0].jointIndex].y,
+                        x2:d[b[1].jointIndex].x,
+                        y2:d[b[1].jointIndex].y,
+                    }
+                });
+            });
+            // console.log(data);
+        }
+        else {
+            self.err('Invalid data config!');
+            return self;
+        }
+
+        // Extract the desired subset
+        if (frames === undefined) {            
+            data = data.filter(function(d: number, i:number){
+                return i % frameSkip == 0;
+            });
+
+            selector = self.svgContainer.selectAll("g.dataframe")
+            .data(data)            
+            .append('g').attr('calss','dataframe')
+            .selectAll('d')
+            .data(function (d: any) {
+                return d;
+            });
+
+            drawFn(selector);            
+        } else if (frames.length == 1) {            
+            data = data[frames[0]];            
+            selector = self.svgContainer.selectAll('g.g-'+dataType)
+            .selectAll('.'+dataType)
+            .data(data);            
+            
+            drawFn(selector);
+        } else if (frames.length == 2) {            
+            data = data.filter(function(d: number, i:number){                
+                return i>=frames[0] && i<frames[1] && (i % frameSkip == 0);
+            });    
+            selector = self.svgContainer.selectAll("g.dataframe")
+            .data(data);
+
+            drawFn(selector);
+        } else {
+            self.err('Invalid frame range!');
+        }
 
         return this;
     }

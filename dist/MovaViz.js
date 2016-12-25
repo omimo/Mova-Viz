@@ -190,7 +190,10 @@ var MovaViz =
 	        else if (dm.frames.length == 1) {
 	            console.log('222');
 	            data = data[dm.frames[0]];
-	            selector = self.svgContainer.selectAll("g.dataframe")
+	            selector = self.svgContainer
+	                .append('g')
+	                .attr('class', 'g-' + dm.dataType)
+	                .selectAll('.' + dm.dataType)
 	                .data(data)
 	                .enter();
 	            dm.fn(selector);
@@ -211,6 +214,74 @@ var MovaViz =
 	        // console.log('eeeee');
 	        // console.log(jointData);
 	        dm.drawn = true;
+	        return this;
+	    };
+	    MovaViz.prototype.updateDraw = function (drawFn, dataType, frames, frameSkip) {
+	        var self = this;
+	        if (frameSkip === undefined)
+	            frameSkip = 1;
+	        if (!self._dataReady) {
+	            self.err('Data is not ready for drawing!');
+	            return self;
+	        }
+	        var data = new Array;
+	        var selector = {};
+	        // Extract the proper data set
+	        if (dataType == 'joint-positions')
+	            data = self.tracks[self.tracks.length - 1].data.getPositionsArray();
+	        else if (dataType == 'joint-rotations')
+	            data = self.tracks[self.tracks.length - 1].data.frameArray;
+	        else if (dataType == 'bone-positions') {
+	            var skeleton_2 = self.tracks[self.tracks.length - 1].data.connectivityMatrix;
+	            data = self.tracks[self.tracks.length - 1].data.getPositionsArray();
+	            data = data.map(function (d, i) {
+	                return skeleton_2.map(function (b, j) {
+	                    // console.log(b);
+	                    return {
+	                        x1: d[b[0].jointIndex].x,
+	                        y1: d[b[0].jointIndex].y,
+	                        x2: d[b[1].jointIndex].x,
+	                        y2: d[b[1].jointIndex].y,
+	                    };
+	                });
+	            });
+	        }
+	        else {
+	            self.err('Invalid data config!');
+	            return self;
+	        }
+	        // Extract the desired subset
+	        if (frames === undefined) {
+	            data = data.filter(function (d, i) {
+	                return i % frameSkip == 0;
+	            });
+	            selector = self.svgContainer.selectAll("g.dataframe")
+	                .data(data)
+	                .append('g').attr('calss', 'dataframe')
+	                .selectAll('d')
+	                .data(function (d) {
+	                return d;
+	            });
+	            drawFn(selector);
+	        }
+	        else if (frames.length == 1) {
+	            data = data[frames[0]];
+	            selector = self.svgContainer.selectAll('g.g-' + dataType)
+	                .selectAll('.' + dataType)
+	                .data(data);
+	            drawFn(selector);
+	        }
+	        else if (frames.length == 2) {
+	            data = data.filter(function (d, i) {
+	                return i >= frames[0] && i < frames[1] && (i % frameSkip == 0);
+	            });
+	            selector = self.svgContainer.selectAll("g.dataframe")
+	                .data(data);
+	            drawFn(selector);
+	        }
+	        else {
+	            self.err('Invalid frame range!');
+	        }
 	        return this;
 	    };
 	    MovaViz.prototype.debug = function (d) {
