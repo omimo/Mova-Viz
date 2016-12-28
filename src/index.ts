@@ -1,5 +1,22 @@
 import Parsers from './parsers/Parsers';
 
+export interface IDataModality {
+    [key: string]: Array<number>;
+}
+
+export interface ITrack {
+    url: string,
+    parserObject: any,
+    format: string,
+    data: IDataModality,
+    // {
+    //     'joint-positions': [0],
+    //     'joint-rotations': [0],
+    //     'bone-positions': [0]
+    // },
+    isMocap: boolean         
+}
+
 export default class MovaViz {
     title: string;
     tracks: any[];
@@ -9,7 +26,7 @@ export default class MovaViz {
     _dataReady: boolean;    
     _drawMethods: any[];
     _updateMethods: any[];
-
+    
     /**
      * The constructor
      * 
@@ -34,37 +51,53 @@ export default class MovaViz {
      * @param  {any} callbackFn an optional function to be called once the data is loaded
      */
     data(url: string, format: string, callbackFn: any) {
-        let self = this;
-    // Create the Track object
-         let track = {
-             url: url,
-             data: 0,
-             format: format,
-             isMocap: false             
-         };    
+        let self = this;                
+        this.log("Loading the track ...");
 
-         if (format in {'bvh':1,'c3d':1}) 
-            track.isMocap = true;
+         let track: ITrack;
 
-         this.log("Loading the track ...");
+        // The Parsers[format] will call the proper function         
+        let parser: any = new Parsers[format]();
+        parser.load(url, function(data: any) {
+            // Create the Track object
+            track = {
+                url: url,
+                parserObject: data,
+                format: format,
+                data: [],
+                isMocap: format in {'bvh':1,'c3d':1}? true : false             
+            }; 
+                        
+            track.data['joint-positions'] = track.parserObject.getPositionsArray();
+            track.data['joint-rotations'] = track.parserObject.frameArray;
+            let skeleton = track.parserObject.connectivityMatrix;            
 
-         // The Parsers[format] will call the proper function         
-         let parser: any = new Parsers[format]();
-         parser.load(url, function(data: any) {
-             track.data = data;             
-             self.log("Done!");
-             self._dataReady = true;            
+            track.data['bone-positions'] = track.data['joint-positions'].map(function (d:any, i:number) {
+                return skeleton.map(function(b:any,j:number) {                    
+                    return {
+                        x1:d[b[0].jointIndex].x,
+                        y1:d[b[0].jointIndex].y,
+                        x2:d[b[1].jointIndex].x,
+                        y2:d[b[1].jointIndex].y,
+                    }
+                });
+            });
 
-             for (let dm of self._drawMethods) {
-                 if (!dm.drawn)
-                    self.callDrawFn(dm);
-             }     
+            self.tracks.push(track);
 
-             if (callbackFn)
+            self.log("Done!");
+            self._dataReady = true;            
+
+            for (let dm of self._drawMethods) {
+                if (!dm.drawn)
+                self.callDrawFn(dm);
+            }     
+
+            if (callbackFn)
                 callbackFn();
          });
 
-         this.tracks.push(track);
+         
 
         return this;
     }
@@ -109,36 +142,15 @@ export default class MovaViz {
             return self;
         }
         
-        let data = new Array;
         let selector = {};
-
-        if (dm.dataType == 'joint-positions') 
-            data = self.tracks[self.tracks.length-1].data.getPositionsArray();
-        else if (dm.dataType == 'joint-rotations') 
-            data = self.tracks[self.tracks.length-1].data.frameArray;
-        else if (dm.dataType == 'bone-positions') {
-            let skeleton = self.tracks[self.tracks.length-1].data.connectivityMatrix;            
-            data = self.tracks[self.tracks.length-1].data.getPositionsArray();
-            data = data.map(function (d:any, i:number) {
-                return skeleton.map(function(b:any,j:number) {
-                    // console.log(b);
-                    return {
-                        x1:d[b[0].jointIndex].x,
-                        y1:d[b[0].jointIndex].y,
-                        x2:d[b[1].jointIndex].x,
-                        y2:d[b[1].jointIndex].y,
-                    }
-                });
-            });
-            // console.log(data);
-        }
-        else {
+        let data = self.tracks[self.tracks.length-1].data[dm.dataType];
+    
+        if (data === undefined){
             self.err('Invalid data config!');
             return self;
         }
 
-        if (dm.frames === undefined) {
-            console.log('111');
+        if (dm.frames === undefined) {            
             data = data.filter(function(d: number, i:number){
                 return i % dm.frameSkip == 0;
             });
@@ -153,8 +165,7 @@ export default class MovaViz {
             });
 
             dm.fn(selector);            
-        } else if (dm.frames.length == 1) {
-            console.log('222');
+        } else if (dm.frames.length == 1) {            
             data = data[dm.frames[0]];            
             selector = self.svgContainer.append('g')
             .attr('class', 'g-'+dm.dataType)
@@ -163,8 +174,7 @@ export default class MovaViz {
             .enter();
 
             dm.fn(selector);
-        } else if (dm.frames.length == 2) {
-            console.log('333');
+        } else if (dm.frames.length == 2) {        
             data = data.filter(function(d: number, i:number){                
                 return i>=dm.frames[0] && i<dm.frames[1] && (i % dm.frameSkip == 0);
             });    
@@ -199,37 +209,16 @@ export default class MovaViz {
             return self;
         }
         
-        let data = new Array;
         let selector = {};
+        let data = self.tracks[self.tracks.length-1].data[dataType];
 
-        // Extract the proper data set
-        if (dataType == 'joint-positions') 
-            data = self.tracks[self.tracks.length-1].data.getPositionsArray();
-        else if (dataType == 'joint-rotations') 
-            data = self.tracks[self.tracks.length-1].data.frameArray;
-        else if (dataType == 'bone-positions') {
-            let skeleton = self.tracks[self.tracks.length-1].data.connectivityMatrix;            
-            data = self.tracks[self.tracks.length-1].data.getPositionsArray();
-            data = data.map(function (d:any, i:number) {
-                return skeleton.map(function(b:any,j:number) {
-                    // console.log(b);
-                    return {
-                        x1:d[b[0].jointIndex].x,
-                        y1:d[b[0].jointIndex].y,
-                        x2:d[b[1].jointIndex].x,
-                        y2:d[b[1].jointIndex].y,
-                    }
-                });
-            });
-            // console.log(data);
-        }
-        else {
+        if (data === undefined){
             self.err('Invalid data config!');
             return self;
         }
 
         // Extract the desired subset
-        if (frames === undefined) {            
+        if (frames === undefined || frames == [-1]) {            
             data = data.filter(function(d: number, i:number){
                 return i % frameSkip == 0;
             });
@@ -251,7 +240,7 @@ export default class MovaViz {
             
             drawFn(selector);
         } else if (frames.length == 2) {            
-            data = data.filter(function(d: number, i:number){                
+            data = data.filter(function(d: number, i:number){                                
                 return i>=frames[0] && i<frames[1] && (i % frameSkip == 0);
             });    
             selector = self.svgContainer.selectAll('g.g-'+dataType)

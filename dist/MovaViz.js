@@ -89,20 +89,33 @@ var MovaViz =
 	     */
 	    MovaViz.prototype.data = function (url, format, callbackFn) {
 	        var self = this;
-	        // Create the Track object
-	        var track = {
-	            url: url,
-	            data: 0,
-	            format: format,
-	            isMocap: false
-	        };
-	        if (format in { 'bvh': 1, 'c3d': 1 })
-	            track.isMocap = true;
 	        this.log("Loading the track ...");
+	        var track;
 	        // The Parsers[format] will call the proper function         
 	        var parser = new Parsers_1.default[format]();
 	        parser.load(url, function (data) {
-	            track.data = data;
+	            // Create the Track object
+	            track = {
+	                url: url,
+	                parserObject: data,
+	                format: format,
+	                data: [],
+	                isMocap: format in { 'bvh': 1, 'c3d': 1 } ? true : false
+	            };
+	            track.data['joint-positions'] = track.parserObject.getPositionsArray();
+	            track.data['joint-rotations'] = track.parserObject.frameArray;
+	            var skeleton = track.parserObject.connectivityMatrix;
+	            track.data['bone-positions'] = track.data['joint-positions'].map(function (d, i) {
+	                return skeleton.map(function (b, j) {
+	                    return {
+	                        x1: d[b[0].jointIndex].x,
+	                        y1: d[b[0].jointIndex].y,
+	                        x2: d[b[1].jointIndex].x,
+	                        y2: d[b[1].jointIndex].y,
+	                    };
+	                });
+	            });
+	            self.tracks.push(track);
 	            self.log("Done!");
 	            self._dataReady = true;
 	            for (var _i = 0, _a = self._drawMethods; _i < _a.length; _i++) {
@@ -113,7 +126,6 @@ var MovaViz =
 	            if (callbackFn)
 	                callbackFn();
 	        });
-	        this.tracks.push(track);
 	        return this;
 	    };
 	    MovaViz.prototype.addDrawMethod = function (drawFn, dataType, frames, frameSkip) {
@@ -147,33 +159,13 @@ var MovaViz =
 	            self.err('Data is not ready for drawing!');
 	            return self;
 	        }
-	        var data = new Array;
 	        var selector = {};
-	        if (dm.dataType == 'joint-positions')
-	            data = self.tracks[self.tracks.length - 1].data.getPositionsArray();
-	        else if (dm.dataType == 'joint-rotations')
-	            data = self.tracks[self.tracks.length - 1].data.frameArray;
-	        else if (dm.dataType == 'bone-positions') {
-	            var skeleton_1 = self.tracks[self.tracks.length - 1].data.connectivityMatrix;
-	            data = self.tracks[self.tracks.length - 1].data.getPositionsArray();
-	            data = data.map(function (d, i) {
-	                return skeleton_1.map(function (b, j) {
-	                    // console.log(b);
-	                    return {
-	                        x1: d[b[0].jointIndex].x,
-	                        y1: d[b[0].jointIndex].y,
-	                        x2: d[b[1].jointIndex].x,
-	                        y2: d[b[1].jointIndex].y,
-	                    };
-	                });
-	            });
-	        }
-	        else {
+	        var data = self.tracks[self.tracks.length - 1].data[dm.dataType];
+	        if (data === undefined) {
 	            self.err('Invalid data config!');
 	            return self;
 	        }
 	        if (dm.frames === undefined) {
-	            console.log('111');
 	            data = data.filter(function (d, i) {
 	                return i % dm.frameSkip == 0;
 	            });
@@ -188,7 +180,6 @@ var MovaViz =
 	            dm.fn(selector);
 	        }
 	        else if (dm.frames.length == 1) {
-	            console.log('222');
 	            data = data[dm.frames[0]];
 	            selector = self.svgContainer.append('g')
 	                .attr('class', 'g-' + dm.dataType)
@@ -198,7 +189,6 @@ var MovaViz =
 	            dm.fn(selector);
 	        }
 	        else if (dm.frames.length == 2) {
-	            console.log('333');
 	            data = data.filter(function (d, i) {
 	                return i >= dm.frames[0] && i < dm.frames[1] && (i % dm.frameSkip == 0);
 	            });
@@ -225,34 +215,14 @@ var MovaViz =
 	            self.err('Data is not ready for drawing!');
 	            return self;
 	        }
-	        var data = new Array;
 	        var selector = {};
-	        // Extract the proper data set
-	        if (dataType == 'joint-positions')
-	            data = self.tracks[self.tracks.length - 1].data.getPositionsArray();
-	        else if (dataType == 'joint-rotations')
-	            data = self.tracks[self.tracks.length - 1].data.frameArray;
-	        else if (dataType == 'bone-positions') {
-	            var skeleton_2 = self.tracks[self.tracks.length - 1].data.connectivityMatrix;
-	            data = self.tracks[self.tracks.length - 1].data.getPositionsArray();
-	            data = data.map(function (d, i) {
-	                return skeleton_2.map(function (b, j) {
-	                    // console.log(b);
-	                    return {
-	                        x1: d[b[0].jointIndex].x,
-	                        y1: d[b[0].jointIndex].y,
-	                        x2: d[b[1].jointIndex].x,
-	                        y2: d[b[1].jointIndex].y,
-	                    };
-	                });
-	            });
-	        }
-	        else {
+	        var data = self.tracks[self.tracks.length - 1].data[dataType];
+	        if (data === undefined) {
 	            self.err('Invalid data config!');
 	            return self;
 	        }
 	        // Extract the desired subset
-	        if (frames === undefined) {
+	        if (frames === undefined || frames == [-1]) {
 	            data = data.filter(function (d, i) {
 	                return i % frameSkip == 0;
 	            });
