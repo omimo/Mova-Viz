@@ -257,7 +257,7 @@ export default class MovaViz {
             selector = self.svgContainer.selectAll('g.g-'+dataType)
             .selectAll('.'+dataType)
             .data(data);
-
+            
             drawFn(selector);
         } else {
             self.err('Invalid frame range!');

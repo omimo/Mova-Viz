@@ -155,6 +155,12 @@ BVHReader.BVH.Joint = function (name, index) {
                 case "Zrotation": this.rotationIndex.z = i; break;
             }
         }
+
+       var order = [];
+        order[this.channelNames.indexOf("Zrotation") % 3] = 'z';
+        order[this.channelNames.indexOf("Yrotation") % 3] = 'y';
+        order[this.channelNames.indexOf("Xrotation") % 3] = 'x';
+        this.order = order.toString().replace(/,/g,'');
     }
 };
 
@@ -255,7 +261,7 @@ BVHReader.BVH.Skeleton = function (root, map, arr, connectivityMatrix, frameCoun
             zangle= deg2rad(channel[joint.rotationIndex.z] || 0);
 
             // var rotMatrix = math.transpose(getRotationMatrix(xangle, yangle, zangle, "xyz"));
-            var rotMatrix = getRotationMatrix1(xangle, yangle, zangle, "xyz"); //this also works
+            var rotMatrix = getRotationMatrix1(xangle, yangle, zangle, joint.order); //this also works
             var posMatrix = [xpos, ypos, zpos];
 
             if(joint.parent){
